@@ -62,7 +62,11 @@ const tags = new Map();
 let chart;
 function initChart() {
   const ctx = document.getElementById('chart').getContext('2d');
-  chart = new Chart(ctx, { type:'line', data:{ labels:[], datasets:[{ label:'value', data:[], borderColor:'#38bdf8', tension:.3, pointRadius:2 }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ ticks:{ color:'#94a3b8' } }, y:{ ticks:{ color:'#94a3b8' } } }, plugins:{ legend:{ labels:{ color:'#e2e8f0' } } } });
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ label: 'value', data: [], borderColor: '#38bdf8', tension: 0.3, pointRadius: 2 }] },
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } }, plugins: { legend: { labels: { color: '#e2e8f0' } } } }
+  });
 }
 function qClass(q){ return q==='good'?'good': q==='bad'?'bad':'warn'; }
 function renderTags() {
