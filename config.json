@@ -1,5 +1,5 @@
 {
-  "server": { "http_addr": ":8080" },
+  "server": { "http_addr": ":8081" },
   "history": { "path": "scada.db" },
   "tags": [
     { "id": "sim.temperature", "name": "Temperature", "type": "float", "unit": "°C", "group": "process", "access": "ro", "min": 0, "max": 100, "metadata": { "driver": "sim" } },
