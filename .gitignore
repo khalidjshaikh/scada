@@ -1,0 +1,16 @@
+# Binaries
+/scada
+*.exe
+*.out
+
+# Database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Go
+vendor/
+
+# OS
+.DS_Store

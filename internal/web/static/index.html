@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCADA Console</title>
+<style>
+:root { --bg:#0f172a; --panel:#1e293b; --accent:#38bdf8; --text:#e2e8f0; --muted:#94a3b8; --good:#22c55e; --bad:#ef4444; --warn:#f59e0b; }
+* { box-sizing:border-box; }
+body { margin:0; font-family: 'Segoe UI', system-ui, sans-serif; background:var(--bg); color:var(--text); }
+header { padding:16px 24px; background:linear-gradient(90deg,#0ea5e9,#6366f1); display:flex; align-items:center; gap:12px; }
+header h1 { margin:0; font-size:20px; }
+.status { margin-left:auto; font-size:13px; opacity:.9; }
+main { padding:20px; display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+.panel { background:var(--panel); border-radius:12px; padding:16px; box-shadow:0 4px 20px rgba(0,0,0,.3); }
+.panel h2 { margin:0 0 12px; font-size:15px; color:var(--accent); }
+.full { grid-column:1 / -1; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th,td { padding:8px 6px; border-bottom:1px solid #334155; text-align:left; }
+th { color:var(--muted); font-weight:600; }
+.tag-val { font-weight:600; }
+.good { color:var(--good); }
+.bad { color:var(--bad); }
+.warn { color:var(--warn); }
+input[type=number], input[type=text] { background:#0f172a; border:1px solid #475569; color:var(--text); padding:4px 6px; border-radius:6px; width:90px; }
+button { background:var(--accent); border:none; color:#0f172a; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; }
+button.danger { background:var(--bad); color:white; }
+.alarm { padding:8px; border-left:4px solid var(--bad); background:#1f1315; margin-bottom:8px; border-radius:6px; font-size:13px; }
+.alarm.acked { border-color:var(--warn); background:#1f1a10; opacity:.7; }
+.alarm.cleared { border-color:var(--good); background:#101f14; opacity:.5; }
+.chart-wrap { height:260px; }
+@media (max-width:900px){ main{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏭 SCADA Console</h1>
+  <span class="status" id="connStatus">connecting…</span>
+</header>
+<main>
+  <div class="panel">
+    <h2>Live Tags</h2>
+    <table id="tagsTable"><thead><tr><th>ID</th><th>Name</th><th>Value</th><th>Unit</th><th>Quality</th><th>Write</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="panel">
+    <h2>Alarms</h2>
+    <div id="alarms"></div>
+  </div>
+  <div class="panel full">
+    <h2>Trend</h2>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    <div style="margin-top:8px;">
+      <select id="trendTag"></select>
+      <button onclick="loadHistory()">Load History</button>
+    </div>
+  </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const tags = new Map();
+let chart;
+function initChart() {
+  const ctx = document.getElementById('chart').getContext('2d');
+  chart = new Chart(ctx, { type:'line', data:{ labels:[], datasets:[{ label:'value', data:[], borderColor:'#38bdf8', tension:.3, pointRadius:2 }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ ticks:{ color:'#94a3b8' } }, y:{ ticks:{ color:'#94a3b8' } } }, plugins:{ legend:{ labels:{ color:'#e2e8f0' } } } });
+}
+function qClass(q){ return q==='good'?'good': q==='bad'?'bad':'warn'; }
+function renderTags() {
+  const tbody = document.querySelector('#tagsTable tbody');
+  tbody.innerHTML = '';
+  for (const t of tags.values()) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${t.id}</td><td>${t.name||t.id}</td><td class="tag-val ${qClass(t.quality)}">${formatVal(t.value)}</td><td>${t.unit||''}</td><td class="${qClass(t.quality)}">${t.quality}</td><td>${t.access==='rw'?`<input type="text" id="w_${t.id}" placeholder="value"><button onclick="writeTag('${t.id}')">Set</button>`:''}</td>`;
+    tbody.appendChild(tr);
+  }
+  // populate trend select
+  const sel = document.getElementById('trendTag');
+  const cur = sel.value;
+  sel.innerHTML = '';
+  for (const t of tags.values()) {
+    const o = document.createElement('option'); o.value=t.id; o.textContent=t.id; sel.appendChild(o);
+  }
+  if (cur) sel.value = cur;
+}
+function formatVal(v){ if (typeof v==='number') return v.toFixed(3); return String(v); }
+async function loadTags() {
+  const r = await fetch('/api/tags'); const data = await r.json();
+  for (const t of data) tags.set(t.id, t);
+  renderTags();
+}
+async function writeTag(id) {
+  const input = document.getElementById('w_'+id);
+  const val = input.value;
+  let parsed = val;
+  const t = tags.get(id);
+  if (t && (t.type==='int'||t.type==='float')) parsed = Number(val);
+  if (t && t.type==='bool') parsed = (val==='true'||val==='1');
+  await fetch('/api/tags/'+encodeURIComponent(id)+'/value', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({value:parsed}) });
+}
+function renderAlarms(list) {
+  const el = document.getElementById('alarms');
+  el.innerHTML = '';
+  for (const a of list) {
+    const div = document.createElement('div');
+    div.className = 'alarm ' + a.state;
+    div.innerHTML = `<strong>${a.name||a.rule_id}</strong> [${a.priority}] ${a.state.toUpperCase()}<br>${a.message} (value=${formatVal(a.value)}) <span style="float:right">${new Date(a.raised_at).toLocaleTimeString()}</span>${a.state==='active'?`<br><button class="danger" onclick="ackAlarm('${a.id}')">Acknowledge</button>`:''}`;
+    el.appendChild(div);
+  }
+}
+async function loadAlarms() {
+  const r = await fetch('/api/alarms'); const data = await r.json();
+  renderAlarms(data);
+}
+async function ackAlarm(id) {
+  await fetch('/api/alarms/'+encodeURIComponent(id)+'/ack', {method:'POST'});
+  loadAlarms();
+}
+async function loadHistory() {
+  const id = document.getElementById('trendTag').value;
+  const r = await fetch('/api/history?tag='+encodeURIComponent(id)+'&limit=500');
+  const data = await r.json();
+  chart.data.labels = data.map(d=>new Date(d.timestamp).toLocaleTimeString());
+  chart.data.datasets[0].label = id;
+  chart.data.datasets[0].data = data.map(d=>Number(d.value));
+  chart.update();
+}
+function connectSSE() {
+  const es = new EventSource('/api/events');
+  es.onopen = ()=>{ document.getElementById('connStatus').textContent='connected'; };
+  es.onerror = ()=>{ document.getElementById('connStatus').textContent='reconnecting…'; };
+  es.addEventListener('tag', e=>{
+    const p = JSON.parse(e.data); const t = p.tag; tags.set(t.id, t); renderTags();
+  });
+  es.addEventListener('alarm', e=>{
+    loadAlarms();
+  });
+  es.addEventListener('snapshot', e=>{
+    const p = JSON.parse(e.data); for (const t of p.tags) tags.set(t.id, t); renderTags();
+  });
+}
+initChart();
+loadTags();
+loadAlarms();
+connectSSE();
+setInterval(loadAlarms, 5000);
+</script>
+</body>
+</html>

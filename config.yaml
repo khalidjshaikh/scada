@@ -1,0 +1,95 @@
+server:
+  http_addr: ":8080"
+history:
+  path: "scada.db"
+
+tags:
+  - id: sim.temperature
+    name: Temperature
+    type: float
+    unit: °C
+    group: process
+    access: ro
+    min: 0
+    max: 100
+    metadata:
+      driver: sim
+  - id: sim.pressure
+    name: Pressure
+    type: float
+    unit: bar
+    group: process
+    access: ro
+    metadata:
+      driver: sim
+  - id: sim.flow
+    name: Flow
+    type: float
+    unit: L/min
+    group: process
+    access: ro
+    metadata:
+      driver: sim
+  - id: sim.level
+    name: Tank Level
+    type: float
+    unit: %
+    group: process
+    access: ro
+    min: 0
+    max: 100
+    metadata:
+      driver: sim
+  - id: sim.pump1
+    name: Pump 1
+    type: bool
+    group: control
+    access: rw
+    metadata:
+      driver: sim
+  - id: sim.status
+    name: Status
+    type: string
+    group: system
+    access: ro
+    metadata:
+      driver: sim
+  - id: sim.counter
+    name: Counter
+    type: int
+    group: system
+    access: ro
+    metadata:
+      driver: sim
+
+alarms:
+  - id: ALM-TEMP-HIGH
+    name: High Temperature
+    tag_id: sim.temperature
+    type: high
+    threshold: 29
+    priority: 3
+    enabled: true
+    deadband: 1
+    message: "Temperature above 29°C"
+  - id: ALM-LEVEL-LOW
+    name: Low Tank Level
+    tag_id: sim.level
+    type: low
+    threshold: 20
+    priority: 2
+    enabled: true
+    deadband: 2
+    message: "Tank level below 20%"
+  - id: ALM-PRESSURE-HIGH
+    name: High Pressure
+    tag_id: sim.pressure
+    type: high
+    threshold: 1.4
+    priority: 4
+    enabled: true
+    deadband: 0.05
+    message: "Pressure above 1.4 bar"
+
+# Optional modbus devices (none by default)
+modbus: []
