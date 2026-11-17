@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -22,6 +23,26 @@ import (
 	"github.com/kshaikh/scada/internal/web"
 )
 
+func printVersion() {
+	info, ok := debug.ReadBuildInfo()
+	fmt.Println("scada 0.1.0")
+	if !ok {
+		fmt.Println("build info: unavailable")
+		return
+	}
+	for _, s := range info.Settings {
+		if s.Key == "vcs.revision" {
+			fmt.Println("commit:", s.Value)
+		}
+		if s.Key == "vcs.time" {
+			fmt.Println("built:", s.Value)
+		}
+		if s.Key == "vcs.modified" {
+			fmt.Println("modified:", s.Value)
+		}
+	}
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("usage: scada [run|version]")
@@ -29,7 +50,7 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "version":
-		fmt.Println("scada 0.1.0")
+		printVersion()
 	case "run":
 		runServer(os.Args[2:])
 	default:
@@ -56,6 +77,13 @@ func runServer(args []string) {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" {
+				logger.Info("scada build", "commit", s.Value)
+			}
+		}
+	}
 
 	bus := event.New(256)
 	database := db.New(bus)
