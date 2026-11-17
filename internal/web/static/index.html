@@ -125,16 +125,16 @@ async function loadHistory() {
 }
 function connectSSE() {
   const es = new EventSource('/api/events');
-  es.onopen = ()=>{ document.getElementById('connStatus').textContent='connected'; };
-  es.onerror = ()=>{ document.getElementById('connStatus').textContent='reconnecting…'; };
+  const setStatus = (t)=>{ document.getElementById('connStatus').textContent = t; };
+  setStatus('connecting…');
+  es.onopen = ()=>{ setStatus('connected'); };
+  es.onerror = ()=>{ setStatus('disconnected / reconnecting…'); };
+  es.addEventListener('snapshot', e=>{ setStatus('connected'); const p = JSON.parse(e.data); for (const t of p.tags) tags.set(t.id, t); renderTags(); });
   es.addEventListener('tag', e=>{
     const p = JSON.parse(e.data); const t = p.tag; tags.set(t.id, t); renderTags();
   });
   es.addEventListener('alarm', e=>{
     loadAlarms();
-  });
-  es.addEventListener('snapshot', e=>{
-    const p = JSON.parse(e.data); for (const t of p.tags) tags.set(t.id, t); renderTags();
   });
 }
 initChart();
