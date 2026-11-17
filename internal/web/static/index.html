@@ -35,6 +35,7 @@ button.danger { background:var(--bad); color:white; }
 <body>
 <header>
   <h1>🏭 SCADA Console</h1>
+  <span class="status" id="versionInfo">version loading…</span>
   <span class="status" id="connStatus">connecting…</span>
 </header>
 <main>
@@ -142,6 +143,11 @@ try { initChart(); } catch (e) { console.error('chart init failed', e); }
 connectSSE();
 loadTags();
 loadAlarms();
+fetch('/api/version').then(r=>r.json()).then(v=>{
+  const el = document.getElementById('versionInfo');
+  const commit = (v.commit||'').slice(0,7);
+  el.textContent = 'v' + (v.version||'0.1.0') + (commit ? ' (' + commit + ')' : '') + (v.modified ? ' *' : '');
+}).catch(()=>{ const el=document.getElementById('versionInfo'); if(el) el.textContent=''; });
 setInterval(loadAlarms, 5000);
 </script>
 </body>

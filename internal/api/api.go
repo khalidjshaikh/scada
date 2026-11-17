@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -35,6 +36,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /api/alarms/{id}/ack", a.ackAlarm)
 	mux.HandleFunc("GET /api/history", a.getHistory)
 	mux.HandleFunc("GET /api/events", a.events)
+	mux.HandleFunc("GET /api/version", a.version)
 	// static web
 	if a.WebFS != nil {
 		mux.Handle("/", http.FileServer(a.WebFS))
@@ -166,6 +168,23 @@ func parseTime(s string) time.Time {
 		return time.UnixMilli(ms)
 	}
 	return time.Now()
+}
+
+func (a *API) version(w http.ResponseWriter, r *http.Request) {
+	info := map[string]any{"version": "0.1.0"}
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range bi.Settings {
+			switch s.Key {
+			case "vcs.revision":
+				info["commit"] = s.Value
+			case "vcs.time":
+				info["built"] = s.Value
+			case "vcs.modified":
+				info["modified"] = s.Value == "true"
+			}
+		}
+	}
+	writeJSON(w, 200, info)
 }
 
 func (a *API) events(w http.ResponseWriter, r *http.Request) {
