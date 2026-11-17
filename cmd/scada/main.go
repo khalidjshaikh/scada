@@ -25,7 +25,7 @@ import (
 
 func printVersion() {
 	info, ok := debug.ReadBuildInfo()
-	fmt.Println("scada 0.1.0")
+	fmt.Println("scada 0.1.1")
 	if !ok {
 		fmt.Println("build info: unavailable")
 		return

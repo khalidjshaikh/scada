@@ -171,7 +171,7 @@ func parseTime(s string) time.Time {
 }
 
 func (a *API) version(w http.ResponseWriter, r *http.Request) {
-	info := map[string]any{"version": "0.1.0"}
+	info := map[string]any{"version": "0.1.1"}
 	if bi, ok := debug.ReadBuildInfo(); ok {
 		for _, s := range bi.Settings {
 			switch s.Key {
