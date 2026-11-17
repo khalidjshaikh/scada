@@ -55,7 +55,7 @@ button.danger { background:var(--bad); color:white; }
     </div>
   </div>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="/chart.umd.min.js"></script>
 <script>
 const tags = new Map();
 let chart;
@@ -115,6 +115,7 @@ async function ackAlarm(id) {
   loadAlarms();
 }
 async function loadHistory() {
+  if (!chart) { alert('Chart library not loaded'); return; }
   const id = document.getElementById('trendTag').value;
   const r = await fetch('/api/history?tag='+encodeURIComponent(id)+'&limit=500');
   const data = await r.json();
@@ -137,10 +138,10 @@ function connectSSE() {
     loadAlarms();
   });
 }
-initChart();
+try { initChart(); } catch (e) { console.error('chart init failed', e); }
+connectSSE();
 loadTags();
 loadAlarms();
-connectSSE();
 setInterval(loadAlarms, 5000);
 </script>
 </body>
